@@ -13,5 +13,23 @@ Lycees.getAll = function(){
         })
     );
 }
+Lycees.getEcole = function(candidats){
+    let result = [];
+    for (let candidat of candidats) {
+        for (let lycee of data) {
+            if (lycee.numero_uai == candidat.ecole){
+                result.push({
+                    numero_uai: lycee.numero_uai,
+                    appellation_officielle: lycee.appellation_officielle,
+                    longitude: lycee.longitude,
+                    latitude: lycee.latitude,
+                    nbCandidat: candidat.nbCandidat
+                });
+            }
+        }
+    }
+    console.log(result);
+    return result;
+}
 
 export { Lycees };
