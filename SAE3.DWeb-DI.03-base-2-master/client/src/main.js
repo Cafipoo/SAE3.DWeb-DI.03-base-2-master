@@ -1,4 +1,5 @@
 import { HeaderView } from "./ui/header/index.js";
+import { LyceeView } from "./ui/lycee/index.js";
 import { Candidats } from "./data/data-candidats.js";
 import { Lycees } from "./data/data-lycees.js";
 import './index.css';
@@ -10,29 +11,27 @@ let C = {};
 
 C.init = async function(){
     V.init();
-    console.log(Candidats.getAll());
-    console.log(Lycees.getAll());
+    // console.log(Candidats.getAll());
+    // console.log(Lycees.getAll());
+    
 }
 
 let V = {
-    header: document.querySelector("#header")
+    header: document.querySelector("#header"),
+    map: document.querySelector("#map"),
 };
 
-V.init = function(){
+V.init = async function(){
     V.renderHeader();
-    V.renderMap();
+    V.renderMarker();
 }
 
 V.renderHeader= function(){
     V.header.innerHTML = HeaderView.render();
 }
 
-V.renderMap = function(){
-    var map = L.map('map').setView([45.836252, 1.231627], 17);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(map);
+V.renderMarker = function(){
+    LyceeView.render(Lycees.getAll());
 }
 
 C.init();
