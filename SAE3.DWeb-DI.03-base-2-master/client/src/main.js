@@ -12,7 +12,7 @@ let C = {};
 C.init = async function(){
     V.init();
     // console.log(Candidats.getAll());
-    console.log(Candidats.getEcole());
+    // console.log(Candidats.getEcole());
     // console.log(Lycees.getAll());
     
 }
@@ -35,5 +35,6 @@ V.renderMarker = function(){
     let candidats = Candidats.getEcole();
     LyceeView.render(Lycees.getEcole(candidats));
 }
+
 
 C.init();

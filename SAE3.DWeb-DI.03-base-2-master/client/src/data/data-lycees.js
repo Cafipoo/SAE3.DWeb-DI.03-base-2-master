@@ -28,7 +28,6 @@ Lycees.getEcole = function(candidats){
             }
         }
     }
-    console.log(result);
     return result;
 }
 
