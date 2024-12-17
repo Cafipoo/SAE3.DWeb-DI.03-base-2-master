@@ -11,10 +11,7 @@ let C = {};
 
 C.init = async function(){
     V.init();
-    // console.log(Candidats.getAll());
-    // console.log(Candidats.getEcole());
-    // console.log(Lycees.getAll());
-    
+    console.log(Candidats.getDiplomesParLycée());
 }
 
 let V = {
