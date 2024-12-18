@@ -1,13 +1,16 @@
-import * as L from 'leaflet';
-import 'leaflet.markercluster/dist/leaflet.markercluster.js';
-import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 
 
 let Chart = {};
+let threshold = 3;
+let globalLycees = [];
+let globalPostBac = [];
+let chartInstance = null;
 
 Chart.render = function(lycees, postBac) {
-    console.log(lycees, postBac);
+    // Stocker les valeurs globales
+    globalLycees = lycees;
+    globalPostBac = postBac;
 
     let seriesCountByPostalCode = {};
 
@@ -18,7 +21,8 @@ Chart.render = function(lycees, postBac) {
                 "Générale": 0,
                 "STI2D": 0,
                 "Post-Bac": 0,
-                "Autres": 0
+                "Autres": 0,
+                "Total": 0
             };
         }
 
@@ -28,6 +32,7 @@ Chart.render = function(lycees, postBac) {
             } else {
                 seriesCountByPostalCode[lycee.code_postal_uai]["Autres"] += serie.nbCandidat;
             }
+            seriesCountByPostalCode[lycee.code_postal_uai]["Total"] += serie.nbCandidat;
         });
     });
 
@@ -39,13 +44,23 @@ Chart.render = function(lycees, postBac) {
                 "Générale": 0,
                 "STI2D": 0,
                 "Post-Bac": 0,
-                "Autres": 0
+                "Autres": 0,
+                "Total": 0
             };
         }
         seriesCountByPostalCode[codePostal]["Post-Bac"] += pb.nbCandidats || 0;
+        seriesCountByPostalCode[codePostal]["Total"] += pb.nbCandidats || 0;
     });
 
-    // Préparer les données pour la chart
+    // Trier les départements par ordre décroissant de candidatures
+    const sortedData = Object.entries(seriesCountByPostalCode).map(([codePostal, counts]) => {
+        return {
+            codePostal,
+            ...counts
+        };
+    }).sort((a, b) => b.Total - a.Total);
+
+    // Regrouper les départements en dessous du seuil
     const seriesData = {
         "Générale": [],
         "STI2D": [],
@@ -53,37 +68,35 @@ Chart.render = function(lycees, postBac) {
         "Autres": []
     };
     const categories = [];
-
-    for (const [codePostal, counts] of Object.entries(seriesCountByPostalCode)) {
-        categories.push(codePostal);
-        seriesData["Générale"].push(counts["Générale"]);
-        seriesData["STI2D"].push(counts["STI2D"]);
-        seriesData["Post-Bac"].push(counts["Post-Bac"]);
-        seriesData["Autres"].push(counts["Autres"]);
-    }
-    const sortedData = categories.map((category, index) => {
-        return {
-            category,
-            "Générale": seriesData["Générale"][index],
-            "STI2D": seriesData["STI2D"][index],
-            "Post-Bac": seriesData["Post-Bac"][index],
-            "Autres": seriesData["Autres"][index]
-        };
-    }).sort((a, b) => a.category - b.category);
-
-    categories.length = 0;
-    seriesData["Générale"].length = 0;
-    seriesData["STI2D"].length = 0;
-    seriesData["Post-Bac"].length = 0;
-    seriesData["Autres"].length = 0;
+    let autres = {
+        "Générale": 0,
+        "STI2D": 0,
+        "Post-Bac": 0,
+        "Autres": 0
+    };
 
     sortedData.forEach(data => {
-        categories.push(data.category);
-        seriesData["Générale"].push(data["Générale"]);
-        seriesData["STI2D"].push(data["STI2D"]);
-        seriesData["Post-Bac"].push(data["Post-Bac"]);
-        seriesData["Autres"].push(data["Autres"]);
+        if (data.Total <= threshold) {
+            autres["Générale"] += data["Générale"];
+            autres["STI2D"] += data["STI2D"];
+            autres["Post-Bac"] += data["Post-Bac"];
+            autres["Autres"] += data["Autres"];
+        } else {
+            categories.push(data.codePostal);
+            seriesData["Générale"].push(data["Générale"]);
+            seriesData["STI2D"].push(data["STI2D"]);
+            seriesData["Post-Bac"].push(data["Post-Bac"]);
+            seriesData["Autres"].push(data["Autres"]);
+        }
     });
+
+    if (autres["Générale"] > 0 || autres["STI2D"] > 0 || autres["Post-Bac"] > 0 || autres["Autres"] > 0) {
+        categories.push("Autres départements");
+        seriesData["Générale"].push(autres["Générale"]);
+        seriesData["STI2D"].push(autres["STI2D"]);
+        seriesData["Post-Bac"].push(autres["Post-Bac"]);
+        seriesData["Autres"].push(autres["Autres"]);
+    }
 
     const options = {
         series: [
@@ -94,9 +107,9 @@ Chart.render = function(lycees, postBac) {
         ],
         chart: {
             type: 'bar',
-            height: categories.length * 30,
+            height: 1000, // Ajuster la hauteur en fonction du nombre de catégories
             stacked: true,
-            width: '100%',
+            width: '100%' // Prendre toute la largeur disponible
         },
         plotOptions: {
             bar: {
@@ -150,8 +163,18 @@ Chart.render = function(lycees, postBac) {
         }
     };
 
-    const chart = new ApexCharts(document.querySelector("#chart"), options);
-    chart.render();
+    if (chartInstance) {
+        chartInstance.updateOptions(options);
+    } else {
+        chartInstance = new ApexCharts(document.querySelector("#chart"), options);
+        chartInstance.render();
+    }
+};
+
+window.updateThreshold = function(value) {
+    document.getElementById('threshold-value').innerText = value;
+    threshold = parseInt(value);
+    Chart.render(globalLycees, globalPostBac);
 };
 
 export { Chart };
