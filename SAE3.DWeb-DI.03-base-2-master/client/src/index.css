@@ -4,5 +4,10 @@
 
 #map { 
     height: 100vh; 
-
+    width: 2/3;
 }
+/* .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+} */
