@@ -107,7 +107,7 @@ Chart.render = function(lycees, postBac) {
         ],
         chart: {
             type: 'bar',
-            height: 1000, // Ajuster la hauteur en fonction du nombre de catégories
+            height: 900, // Ajuster la hauteur en fonction du nombre de catégories
             stacked: true,
             width: '100%' // Prendre toute la largeur disponible
         },
