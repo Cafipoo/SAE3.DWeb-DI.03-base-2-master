@@ -72,6 +72,7 @@ Lycees.getLyceecandidat = function(candidats){
                     appellation_officielle: lycee.appellation_officielle,
                     longitude: lycee.longitude,
                     latitude: lycee.latitude,
+                    code_postal_uai: lycee.code_postal_uai.slice(0, -3) + '000',
                     series: [] 
                 });
             }
@@ -86,9 +87,7 @@ Lycees.getLyceecandidat = function(candidats){
     }
 
     result = Array.from(lyceesMap.values());
-
-    console.log("Total candidats:", totalCandidats);
-    console.log(result);
+    result.sort((a, b) => a.code_postal_uai.localeCompare(b.code_postal_uai));
     return result;
 }
 

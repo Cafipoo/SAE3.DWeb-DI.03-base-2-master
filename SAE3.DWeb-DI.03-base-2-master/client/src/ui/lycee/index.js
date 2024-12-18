@@ -7,7 +7,7 @@ let LyceeView = {};
 
 LyceeView.render = function(lycees, postBac) {
     // Initialisation de la carte
-    let map = L.map('map').setView([45.836252, 1.231627], 10);
+    let map = L.map('map').setView([45.836252, 1.231627], 7);
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
@@ -59,10 +59,7 @@ LyceeView.render = function(lycees, postBac) {
             const categorizedSeries = categorizeSeries(lycee.series);
 
             const marker = L.marker([parseFloat(lycee.latitude), parseFloat(lycee.longitude)], {
-                icon: L.divIcon({
-                    className: 'lycee-marker',
-                    html: `<div style="background-color: #3388ff; width: 15px; height: 15px; border-radius: 50%; border: 2px solid white;"></div>`,
-                }),
+
             }).bindPopup(`
                 <b>${lycee.appellation_officielle}</b><br>
                 Nombre de candidats : ${totalCandidats}<br>
@@ -121,7 +118,7 @@ LyceeView.render = function(lycees, postBac) {
             if (marker._isPostBac) {
                 const markerEl = marker.getElement();
                 if (markerEl) {
-                    if (currentZoom > 10) {
+                    if (currentZoom > 7) {
                         // Afficher les marqueurs post-bac
                         markerEl.style.display = 'block';
                     } else {
@@ -133,10 +130,8 @@ LyceeView.render = function(lycees, postBac) {
         });
     }
 
-    // Gérer l'événement de zoom pour afficher/masquer les marqueurs post-bac
     map.on('zoomend', togglePostBacMarkers);
 
-    // Affichage des informations dans les clusters lors du clic
     function configureClusterEvents(clusterGroup) {
         clusterGroup.on('clusterclick', function (a) {
             const markers = a.layer.getAllChildMarkers();
@@ -169,11 +164,10 @@ LyceeView.render = function(lycees, postBac) {
 
     configureClusterEvents(lyceeCluster);
 
-    // Ajouter le cluster à la carte
     map.addLayer(lyceeCluster);
 
-    // Masquer les post-bac initialement
     togglePostBacMarkers();
+    
 };
 
 export { LyceeView };

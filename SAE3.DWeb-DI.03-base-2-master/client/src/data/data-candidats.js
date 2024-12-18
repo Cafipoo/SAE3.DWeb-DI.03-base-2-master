@@ -37,7 +37,7 @@ Candidats.getDiplomesParLycée = function() {
 
         // Extraction des informations nécessaires
         for (let i = 0; i < candidat.Scolarite.length; i++) {
-            if (candidat.Scolarite[i].UAIEtablissementorigine || candidat.Baccalaureat.TypeDiplomeLibelle== "Baccalauréat en préparation") {
+            if (candidat.Scolarite[i].UAIEtablissementorigine && candidat.Baccalaureat.TypeDiplomeLibelle== "Baccalauréat en préparation") {
                 ecole = candidat.Scolarite[i].UAIEtablissementorigine;
                 break; // Une fois l'établissement trouvé, on peut sortir de la boucle
             }
@@ -81,8 +81,6 @@ Candidats.getDiplomesParLycée = function() {
     });
 
     result.sort((a, b) => a.ecole.localeCompare(b.ecole));
-
-    console.log(result);
     return result;
 };
 Candidats.getPostBack = function() {
@@ -91,7 +89,7 @@ Candidats.getPostBack = function() {
     );
 
     const result = candidatsAvecBac.map(candidat => {
-        for (let i = 0; i < candidat.Scolarite.length; i++) {
+        for (let i = 0; i < 2; i++) {
             const codePostal = candidat.Scolarite[i].CommuneEtablissementOrigineCodePostal;
             if (codePostal) { 
                 return { codePostal };
@@ -103,43 +101,54 @@ Candidats.getPostBack = function() {
     result.sort((a, b) => a.codePostal.localeCompare(b.codePostal));
     return result;
 };
-Candidats.getPostBacByDepartement  = function() {
+
+Candidats.getPostBacByDepartement = function() {
     const codesCoordonnees = Codes.getAll();
-    // Filtrer les candidats post-bac (Baccalauréat obtenu)
     const candidatsAvecBac = data.filter(candidat => 
         candidat.Baccalaureat && candidat.Baccalaureat.TypeDiplomeLibelle === "Baccalauréat obtenu"
     );
 
-    // Regrouper les candidats par code postal
-    const candidatsParCodePostal = candidatsAvecBac.reduce((acc, candidat) => {
-        // Trouver le code postal valide
-        const scolarite = candidat.Scolarite.find(s => s.CommuneEtablissementOrigineCodePostal);
-        if (scolarite && scolarite.CommuneEtablissementOrigineCodePostal) {
-            const codePostal = scolarite.CommuneEtablissementOrigineCodePostal;
+    const candidatsParCodePostal = {};
+    let pascodePostal = 0;
+    candidatsAvecBac.forEach(candidat => {
+        let codePostal = null;
 
-            // Vérifier si le code postal existe dans les coordonnées
-            const coordonnees = codesCoordonnees.find(coord => coord.code_postal === codePostal);
-            if (coordonnees) {
-                acc[codePostal] = acc[codePostal] || { 
-                    coordonnees, 
-                    nbCandidats: 0 
-                };
-                acc[codePostal].nbCandidats += 1; // Incrémenter le compteur de candidats
+        for (let i = 0; i < 2; i++) {
+            if (candidat.Scolarite[i] && candidat.Scolarite[i].CommuneEtablissementOrigineCodePostal) {
+                codePostal = candidat.Scolarite[i].CommuneEtablissementOrigineCodePostal;
+                break;
             }
         }
-        return acc;
-    }, {});
+
+        if (codePostal) {
+            const normalizedCodePostal = codePostal.slice(0, 2) + "000";
+            const coordonnees = codesCoordonnees.find(coord => coord.code_postal === normalizedCodePostal);
+            if (coordonnees) {
+                if (!candidatsParCodePostal[normalizedCodePostal]) {
+                    candidatsParCodePostal[normalizedCodePostal] = { 
+                        coordonnees, 
+                        nbCandidats: 0 
+                    };
+                }
+                candidatsParCodePostal[normalizedCodePostal].nbCandidats += 1;
+            }
+        }
+        else {
+            pascodePostal++;
+        }
+    });
 
     const result = Object.values(candidatsParCodePostal).map(item => ({
         coordonnees: item.coordonnees,
         nbCandidats: item.nbCandidats
     }));
 
-    // Trier les résultats par ordre de code postal
     result.sort((a, b) => a.coordonnees.code_postal.localeCompare(b.coordonnees.code_postal));
+
 
     return result;
 };
+
 
 
 
