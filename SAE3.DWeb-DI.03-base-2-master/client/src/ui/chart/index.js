@@ -1,6 +1,5 @@
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-
-
+import {circlePopupValues} from '../lycee/index.js';
 let Chart = {};
 let threshold = 3;
 let globalLycees = [];
@@ -11,6 +10,8 @@ Chart.render = function(lycees, postBac) {
     // Stocker les valeurs globales
     globalLycees = lycees;
     globalPostBac = postBac;
+
+    console.log(circlePopupValues);
 
     let seriesCountByPostalCode = {};
 
@@ -51,6 +52,17 @@ Chart.render = function(lycees, postBac) {
         seriesCountByPostalCode[codePostal]["Post-Bac"] += pb.nbCandidats || 0;
         seriesCountByPostalCode[codePostal]["Total"] += pb.nbCandidats || 0;
     });
+
+    // **Ajouter les valeurs de circlePopupValues sous le nom "Cercle"**
+    if (circlePopupValues) {
+        seriesCountByPostalCode["Cercle"] = {
+            "Générale": circlePopupValues.Générale || 0,
+            "STI2D": circlePopupValues.STI2D || 0,
+            "Post-Bac": circlePopupValues.PostBac || 0,
+            "Autres": circlePopupValues.Autres || 0,
+            "Total": circlePopupValues.Total || 0
+        };
+    }
 
     // Trier les départements par ordre décroissant de candidatures
     const sortedData = Object.entries(seriesCountByPostalCode).map(([codePostal, counts]) => {
@@ -170,11 +182,12 @@ Chart.render = function(lycees, postBac) {
         chartInstance.render();
     }
 };
-
 window.updateThreshold = function(value) {
     document.getElementById('threshold-value').innerText = value;
     threshold = parseInt(value);
     Chart.render(globalLycees, globalPostBac);
 };
+
+
 
 export { Chart };

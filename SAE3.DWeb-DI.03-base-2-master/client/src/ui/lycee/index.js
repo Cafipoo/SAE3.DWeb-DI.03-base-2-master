@@ -2,8 +2,10 @@ import * as L from 'leaflet';
 import 'leaflet.markercluster/dist/leaflet.markercluster.js';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
+import {Chart} from '../chart/index.js';
 
 let LyceeView = {};
+let circlePopupValues = {};
 
 LyceeView.render = function (lycees, postBac) {
     // Initialisation de la carte
@@ -185,6 +187,22 @@ LyceeView.render = function (lycees, postBac) {
             Post-Bac : ${totals.PostBac}<br>
             Autres : ${totals.Autres}
         `).openPopup();
+        const circlePopup = {
+            getLatLng: () => circle.getLatLng(),
+            getPopupContent: () => {
+                const bounds = circle.getBounds();
+                const totals = calculateCircleTotals(bounds);
+                return {
+                    Total: totals.Total,
+                    Générale: totals.Général,
+                    STI2D: totals.STI2D,
+                    PostBac: totals.PostBac,
+                    Autres: totals.Autres,
+                };
+            }
+        };
+        circlePopupValues = circlePopup.getPopupContent();
+        return circlePopupValues;
     }
 
     function updateMarkers() {
@@ -193,6 +211,7 @@ LyceeView.render = function (lycees, postBac) {
         if (circleActive) {
             map.removeLayer(lyceeCluster);
             updateCirclePopup();
+            Chart.render(lycees,postBac);
         } else {
             renderLyceeMarkers(lycees, L.latLngBounds([[-90, -180], [90, 180]]));
             renderPostBacMarkers(postBac, L.latLngBounds([[-90, -180], [90, 180]]));
@@ -224,7 +243,10 @@ LyceeView.render = function (lycees, postBac) {
         if (circleActive) updateMarkers();
     };
 
+
     updateMarkers();
 };
 
 export { LyceeView };
+
+export { circlePopupValues };
