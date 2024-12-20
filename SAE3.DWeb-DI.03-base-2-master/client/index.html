@@ -12,10 +12,10 @@
 <body class="bg-gray-100">
     <section id="header"></section>
     <input type="button" value="Charger les données" id="toggle-circle">
-    <input type="range" id="map-slider" min="1" max="650" value="650" oninput="updateMapRadius(this.value)">
+    <input type="range" id="map-slider" min="1" max="650" value="650">
     <label for="map-slider">Nombre de kilomètres : <span id="map-value">650</span></label>
-    <input type="range" id="threshold-slider" min="1" max="100" value="3" oninput="updateThreshold(this.value)">
-    <label for="threshold-slider">Seuil de candidatures: <span id="threshold-value">3</span></label>
+    <input type="range" id="chart-slider" min="3" max="100" value="3">
+    <label for="chart-slider">Seuil de candidatures: <span id="chart-value">3</span></label>
     <div class="container">
         <div class="map-container">
             

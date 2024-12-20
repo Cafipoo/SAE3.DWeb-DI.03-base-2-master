@@ -2,31 +2,73 @@ import * as L from 'leaflet';
 import 'leaflet.markercluster/dist/leaflet.markercluster.js';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
-import {Chart} from '../chart/index.js';
+import { Chart } from '../chart/index.js';
 
 let LyceeView = {};
-let circlePopupValues = {};
+let filteredLycees = [];
+let filteredPostBac = [];
+let map;
+let circle;
+let lyceeCluster;
+let circleActive = true; // État actif ou non du filtre du cercle
 
-LyceeView.render = function (lycees, postBac) {
+LyceeView.render = function (lycees, postBac, mapValue) {
+    mapValue = mapValue * 1000;
+
     // Initialisation de la carte
-    let map = L.map('map').setView([45.836252, 1.231627], 7);
+    if (!map) {
+        map = L.map('map').setView([45.836252, 1.231627], 7);
 
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        }).addTo(map);
 
-    const defaultRadius = 650000; // Rayon par défaut en mètres
-    let circle = L.circle([45.836252, 1.231627], {
+        lyceeCluster = L.markerClusterGroup({ zoomToBoundsOnClick: false });
+    }
+
+    // Supprimer le cercle existant
+    if (circle) {
+        map.removeLayer(circle);
+    }
+
+    // Ajouter un nouveau cercle
+    circle = L.circle([45.836252, 1.231627], {
         color: 'red',
         fillColor: '#f03',
         fillOpacity: 0.5,
-        radius: defaultRadius,
+        radius: mapValue,
     }).addTo(map);
 
-    let circleActive = true;
+    // Gestion du cluster
+    lyceeCluster.on('clusterclick', function (event) {
+        const markers = event.layer.getAllChildMarkers();
+        let popupContent = `<b>Informations sur le cluster :</b><br>`;
+        let generalTotal = 0, sti2dTotal = 0, postBacTotal = 0, autresTotal = 0, candidatsTotal = 0;
 
-    const lyceeCluster = L.markerClusterGroup({ zoomToBoundsOnClick: false });
+        markers.forEach((marker) => {
+            const { categorizedSeries, lyceeCandidats, postBacCandidats } = marker;
+
+            if (categorizedSeries) {
+                generalTotal += categorizedSeries.Général || 0;
+                sti2dTotal += categorizedSeries.STI2D || 0;
+                postBacTotal += categorizedSeries.PostBac || 0;
+                autresTotal += categorizedSeries.Autres || 0;
+            }
+
+            candidatsTotal += (lyceeCandidats || 0) + (postBacCandidats || 0);
+        });
+
+        popupContent += `
+            Total de candidats : ${candidatsTotal}<br>
+            Général : ${generalTotal}<br>
+            STI2D : ${sti2dTotal}<br>
+            Post-Bac : ${postBacTotal}<br>
+            Autres : ${autresTotal}
+        `;
+
+        event.layer.bindPopup(popupContent).openPopup();
+    });
 
     function categorizeSeries(series) {
         const categories = {
@@ -56,77 +98,14 @@ LyceeView.render = function (lycees, postBac) {
         return result;
     }
 
-    lyceeCluster.on('clusterclick', function (event) {
-        const markers = event.layer.getAllChildMarkers(); // Obtenir tous les marqueurs du cluster
-
-        // Créer un résumé des informations dans le cluster
-        let popupContent = `<b>Informations sur le cluster :</b><br>`;
-        let generalTotal = 0, sti2dTotal = 0, postBacTotal = 0, autresTotal = 0, candidatsTotal = 0;
-
-        markers.forEach((marker) => {
-            const { categorizedSeries, lyceeCandidats, postBacCandidats } = marker;
-
-            if (categorizedSeries) {
-                generalTotal += categorizedSeries.Général || 0;
-                sti2dTotal += categorizedSeries.STI2D || 0;
-                postBacTotal += categorizedSeries.PostBac || 0;
-                autresTotal += categorizedSeries.Autres || 0;
-            }
-
-            candidatsTotal += (lyceeCandidats || 0) + (postBacCandidats || 0);
-        });
-
-        popupContent += `
-            Total de candidats : ${candidatsTotal}<br>
-            Général : ${generalTotal}<br>
-            STI2D : ${sti2dTotal}<br>
-            Post-Bac : ${postBacTotal}<br>
-            Autres : ${autresTotal}
-        `;
-
-        event.layer.bindPopup(popupContent).openPopup();
-    });
-
-    function calculateCircleTotals(bounds) {
-        const totals = { Général: 0, STI2D: 0, PostBac: 0, Autres: 0, Total: 0 };
-
-        lycees.forEach((lycee) => {
-            if (lycee.latitude == null || lycee.longitude == null) return;
-
-            const markerLatLng = L.latLng(parseFloat(lycee.latitude), parseFloat(lycee.longitude));
-            if (!bounds.contains(markerLatLng)) return;
-
-            const categorizedSeries = categorizeSeries(lycee.series);
-            totals.Général += categorizedSeries.Général;
-            totals.STI2D += categorizedSeries.STI2D;
-            totals.PostBac += categorizedSeries.PostBac;
-            totals.Autres += categorizedSeries.Autres;
-            totals.Total += Object.values(categorizedSeries).reduce((a, b) => a + b, 0);
-        });
-
-        postBac.forEach((pb) => {
-            const geopoint = pb.coordonnees && pb.coordonnees._geopoint;
-            if (!geopoint) return;
-
-            const [latitude, longitude] = geopoint.split(',').map(Number);
-            const markerLatLng = L.latLng(latitude, longitude);
-            if (!bounds.contains(markerLatLng)) return;
-
-            totals.PostBac += pb.nbCandidats || 0;
-            totals.Total += pb.nbCandidats || 0;
-        });
-
-        return totals;
-    }
-
-    function renderLyceeMarkers(lycees, bounds) {
+    function renderLyceeMarkers(lycees) {
         lyceeCluster.clearLayers();
 
         lycees.forEach((lycee) => {
             if (lycee.latitude == null || lycee.longitude == null) return;
 
             const markerLatLng = L.latLng(parseFloat(lycee.latitude), parseFloat(lycee.longitude));
-            if (circleActive && !bounds.contains(markerLatLng)) return;
+            if (circleActive && circle.getLatLng().distanceTo(markerLatLng) > circle.getRadius()) return;
 
             const totalCandidats = lycee.series.reduce((sum, serie) => sum + (serie.nbCandidat || 0), 0);
             const categorizedSeries = categorizeSeries(lycee.series);
@@ -148,14 +127,14 @@ LyceeView.render = function (lycees, postBac) {
         map.addLayer(lyceeCluster);
     }
 
-    function renderPostBacMarkers(postBac, bounds) {
+    function renderPostBacMarkers(postBac) {
         postBac.forEach((pb) => {
             const geopoint = pb.coordonnees && pb.coordonnees._geopoint;
             if (!geopoint) return;
 
             const [latitude, longitude] = geopoint.split(',').map(Number);
             const markerLatLng = L.latLng(latitude, longitude);
-            if (circleActive && !bounds.contains(markerLatLng)) return;
+            if (circleActive && circle.getLatLng().distanceTo(markerLatLng) > circle.getRadius()) return;
 
             const marker = L.marker(markerLatLng, {
                 icon: L.divIcon({
@@ -175,78 +154,43 @@ LyceeView.render = function (lycees, postBac) {
         });
     }
 
-    function updateCirclePopup() {
-        const bounds = circle.getBounds();
-        const totals = calculateCircleTotals(bounds);
-
-        circle.bindPopup(`
-            <b>Statistiques dans le cercle :</b><br>
-            Total de candidats : ${totals.Total}<br>
-            Général : ${totals.Général}<br>
-            STI2D : ${totals.STI2D}<br>
-            Post-Bac : ${totals.PostBac}<br>
-            Autres : ${totals.Autres}
-        `).openPopup();
-        const circlePopup = {
-            getLatLng: () => circle.getLatLng(),
-            getPopupContent: () => {
-                const bounds = circle.getBounds();
-                const totals = calculateCircleTotals(bounds);
-                return {
-                    Total: totals.Total,
-                    Générale: totals.Général,
-                    STI2D: totals.STI2D,
-                    PostBac: totals.PostBac,
-                    Autres: totals.Autres,
-                };
-            }
-        };
-        circlePopupValues = circlePopup.getPopupContent();
-        return circlePopupValues;
-    }
-
     function updateMarkers() {
-        const bounds = circle.getBounds();
-
-        if (circleActive) {
-            map.removeLayer(lyceeCluster);
-            updateCirclePopup();
-            Chart.render(lycees,postBac);
+        if (!circleActive) {
+            if (circle) map.removeLayer(circle); // Masquer le cercle
         } else {
-            renderLyceeMarkers(lycees, L.latLngBounds([[-90, -180], [90, 180]]));
-            renderPostBacMarkers(postBac, L.latLngBounds([[-90, -180], [90, 180]]));
-            map.addLayer(lyceeCluster);
+            if (!map.hasLayer(circle)) map.addLayer(circle); // Réafficher le cercle si actif
         }
+
+        const bounds = circleActive ? circle.getBounds() : L.latLngBounds([[-90, -180], [90, 180]]);
+        const filteredLycees = lycees.filter((lycee) => {
+            if (lycee.latitude == null || lycee.longitude == null) return false;
+            const markerLatLng = L.latLng(parseFloat(lycee.latitude), parseFloat(lycee.longitude));
+            return bounds.contains(markerLatLng);
+        });
+
+        const filteredPostBac = postBac.filter((pb) => {
+            const geopoint = pb.coordonnees && pb.coordonnees._geopoint;
+            if (!geopoint) return false;
+            const [latitude, longitude] = geopoint.split(',').map(Number);
+            const markerLatLng = L.latLng(latitude, longitude);
+            return bounds.contains(markerLatLng);
+        });
+
+        renderLyceeMarkers(filteredLycees);
+        renderPostBacMarkers(filteredPostBac);
+
+        let chart = document.getElementById('chart-slider').value;
+        Chart.render(filteredLycees, filteredPostBac, chart);
+        return { filteredLycees, filteredPostBac };
     }
 
-    function toggleCircle() {
+    // Ajout d'un gestionnaire pour le bouton de bascule
+    document.getElementById('toggle-circle').addEventListener('click', () => {
         circleActive = !circleActive;
-        if (circleActive) {
-            map.addLayer(circle);
-            map.removeLayer(lyceeCluster);
-            updateMarkers();
-        } else {
-            map.removeLayer(circle);
-            renderLyceeMarkers(lycees, L.latLngBounds([[-90, -180], [90, 180]]));
-            renderPostBacMarkers(postBac, L.latLngBounds([[-90, -180], [90, 180]]));
-            map.addLayer(lyceeCluster);
-        }
-    }
-
-    document.getElementById('toggle-circle').addEventListener('click', toggleCircle);
-
-    window.updateMapRadius = function (value) {
-        document.getElementById('map-value').innerText = value + ' km';
-        const radiusInMeters = parseInt(value) * 1000;
-        circle.setRadius(radiusInMeters);
-
-        if (circleActive) updateMarkers();
-    };
-
+        updateMarkers();
+    });
 
     updateMarkers();
 };
 
-export { LyceeView };
-
-export { circlePopupValues };
+export { LyceeView, filteredLycees, filteredPostBac};
