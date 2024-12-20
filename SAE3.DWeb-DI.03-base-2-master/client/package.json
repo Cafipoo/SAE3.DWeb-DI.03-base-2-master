@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tw:w": "npx tailwindcss -i ./src/index.css -o ./src/dist/output.css --watch"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",
@@ -15,6 +16,8 @@
     "vite": "^5.4.8"
   },
   "dependencies": {
-    "idb": "^8.0.0"
+    "idb": "^8.0.0",
+    "leaflet": "^1.9.4",
+    "leaflet.markercluster": "^1.5.3"
   }
 }
